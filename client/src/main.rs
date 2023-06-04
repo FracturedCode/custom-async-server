@@ -1,6 +1,23 @@
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
+async fn send_request(msg: &[u8]) -> io::Result<()> {
+    let mut stream: TcpStream = TcpStream::connect("127.0.0.1:5000").await?;
+    stream.write_all(msg).await?;
+
+    let mut data: [u8; 200] = [0 as u8; 200];
+    let bytes_read = stream.read(&mut data).await?;
+
+    if bytes_read == 0 {
+        return Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "Connection closed or no bytes sent",
+        ));
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let msg =
@@ -8,12 +25,7 @@ async fn main() -> io::Result<()> {
 
     let (mut requests, mut failures) = (0, 0);
     loop {
-        let mut stream: TcpStream = TcpStream::connect("127.0.0.1:5000").await?;
-        stream.write_all(msg).await?;
-
-        let mut data: [u8; 200] = [0 as u8; 200];
-        let bytes_read = stream.read(&mut data).await?;
-        if bytes_read == 0 {
+        if let Err(_) = send_request(msg).await {
             failures += 1;
         }
         requests += 1;
