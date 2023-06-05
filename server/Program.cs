@@ -6,7 +6,7 @@ using System.Net.Sockets;
 IPEndPoint ip = new(IPAddress.Any, 5000);
 
 TcpListener listener = new(ip);
-listener.Start(10000);
+listener.Start(10100);
 
 using CancellationTokenSource cts = new();
 AppDomain.CurrentDomain.ProcessExit += (_, _) => cts.Cancel();
@@ -32,10 +32,10 @@ static async Task UpdateInfo(CancellationToken token)
 		await Task.Delay(100, token);
 		sw.Stop();
 		long requestsDuringDelay = Locks.RequestsReceived - requestsBeforeDelay;
-		decimal rate = ((decimal)requestsDuringDelay / (decimal)sw.ElapsedMilliseconds) * 1000;
-		lock(Locks.ConsoleLock)
+		decimal rate = requestsDuringDelay / (decimal)sw.ElapsedMilliseconds * 1000;
+		lock (Locks.ConsoleLock)
 		{
-			Console.Write($"\r{Locks.RequestsReceived} requests total. {rate:n0}r/s   ");
+			Console.Write($"\r{Locks.RequestsReceived} requests total. {rate:n0}r/s     ");
 		}
 	}
 }
