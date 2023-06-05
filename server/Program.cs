@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -25,11 +26,17 @@ static async Task UpdateInfo(CancellationToken token)
 {
 	while (!token.IsCancellationRequested)
 	{
+		long requestsBeforeDelay = Locks.RequestsReceived;
+		Stopwatch sw = new();
+		sw.Start();
+		await Task.Delay(100, token);
+		sw.Stop();
+		long requestsDuringDelay = Locks.RequestsReceived - requestsBeforeDelay;
+		decimal rate = ((decimal)requestsDuringDelay / (decimal)sw.ElapsedMilliseconds) * 1000;
 		lock(Locks.ConsoleLock)
 		{
-			Console.Write($"\rReceived {Locks.RequestsReceived} requests");
+			Console.Write($"\r{Locks.RequestsReceived} requests total. {rate:n0}r/s   ");
 		}
-		await Task.Delay(100, token);
 	}
 }
 
@@ -64,5 +71,5 @@ class Locks
 {
 	public static readonly object ConsoleLock = new();
 
-	public static ulong RequestsReceived = 0;
+	public static long RequestsReceived = 0;
 }
