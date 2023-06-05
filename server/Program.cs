@@ -10,16 +10,32 @@ listener.Start(10000);
 using CancellationTokenSource cts = new();
 AppDomain.CurrentDomain.ProcessExit += (_, _) => cts.Cancel();
 
+_ = Task.Run(async () => await UpdateInfo(cts.Token));
+
 while (!cts.IsCancellationRequested)
 {
 	TcpClient connectionHandle = await listener.AcceptTcpClientAsync(cts.Token);
+	Locks.RequestsReceived++;
 	_ = Task.Run(() => ClientHandler(connectionHandle, cts.Token));
 }
 
+Console.WriteLine();
+
+static async Task UpdateInfo(CancellationToken token)
+{
+	while (!token.IsCancellationRequested)
+	{
+		lock(Locks.ConsoleLock)
+		{
+			Console.Write($"\rReceived {Locks.RequestsReceived} requests");
+		}
+		await Task.Delay(100, token);
+	}
+}
 
 static async Task ClientHandler(TcpClient connectionHandle, CancellationToken cancellationToken)
 {
-	byte[] buffer = ArrayPool<byte>.Shared.Rent(1024);
+	byte[] buffer = ArrayPool<byte>.Shared.Rent(512);
 	try
 	{
 		using TcpClient handle = connectionHandle;
@@ -47,4 +63,6 @@ static async Task ClientHandler(TcpClient connectionHandle, CancellationToken ca
 class Locks
 {
 	public static readonly object ConsoleLock = new();
+
+	public static ulong RequestsReceived = 0;
 }
