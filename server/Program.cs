@@ -17,6 +17,7 @@ while (!cts.IsCancellationRequested)
 {
 	TcpClient connectionHandle = await listener.AcceptTcpClientAsync(cts.Token);
 	Locks.RequestsReceived++;
+	Interlocked.Increment(ref Locks.OpenConnections);
 	_ = Task.Run(() => ClientHandler(connectionHandle, cts.Token));
 }
 
@@ -35,7 +36,7 @@ static async Task UpdateInfo(CancellationToken token)
 		decimal rate = requestsDuringDelay / (decimal)sw.ElapsedMilliseconds * 1000;
 		lock (Locks.ConsoleLock)
 		{
-			Console.Write($"\r{Locks.RequestsReceived} requests total. {rate:n0}r/s     ");
+			Console.Write($"\r{Locks.RequestsReceived} requests total. {Locks.OpenConnections} open connections. {rate:n0}r/s     ");
 		}
 	}
 }
@@ -53,6 +54,7 @@ static async Task ClientHandler(TcpClient connectionHandle, CancellationToken ca
 			return;
 		}
 		await stream.WriteAsync(buffer.AsMemory(..bytesRead), cancellationToken);
+		Interlocked.Decrement(ref Locks.OpenConnections);
 	}
 	catch (Exception e)
 	{
@@ -72,4 +74,6 @@ class Locks
 	public static readonly object ConsoleLock = new();
 
 	public static long RequestsReceived = 0;
+
+	public static int OpenConnections = 0;
 }
