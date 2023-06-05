@@ -21,6 +21,8 @@ In the vscode command pallete, find and execute something like "Rebuild and Reop
 
 ## How to execute
 
+You will need the .NET sdk and rust toolchain installed if you are not using the dev container.
+
 ### Server
 
 ```bash
