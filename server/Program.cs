@@ -9,18 +9,30 @@ TcpListener listener = new(ip);
 listener.Start(10100);
 
 using CancellationTokenSource cts = new();
-AppDomain.CurrentDomain.ProcessExit += (_, _) => cts.Cancel();
+Console.CancelKeyPress += delegate (object? s, ConsoleCancelEventArgs e)
+{
+	e.Cancel = true;
+	cts.Cancel();
+};
 
 _ = Task.Run(async () => await UpdateInfo(cts.Token));
 
 while (!cts.IsCancellationRequested)
 {
-	TcpClient connectionHandle = await listener.AcceptTcpClientAsync(cts.Token);
-	Locks.RequestsReceived++;
-	Interlocked.Increment(ref Locks.OpenConnections);
-	_ = Task.Run(() => ClientHandler(connectionHandle, cts.Token));
+	try
+	{
+		TcpClient connectionHandle = await listener.AcceptTcpClientAsync(cts.Token);
+		Locks.RequestsReceived++;
+		Interlocked.Increment(ref Locks.OpenConnections);
+		_ = Task.Run(() => ClientHandler(connectionHandle, cts.Token));
+	}
+	catch (OperationCanceledException)
+	{
+		break;
+	}
 }
 
+listener.Stop();
 Console.WriteLine();
 
 static async Task UpdateInfo(CancellationToken token)
