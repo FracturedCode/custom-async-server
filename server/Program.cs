@@ -40,6 +40,9 @@ static async Task UpdateInfo(CancellationToken token)
 	while (!token.IsCancellationRequested)
 	{
 		long requestsBeforeDelay = Locks.RequestsReceived;
+		// Yes, we are timing the Task.Delay.
+		// AFAIK the SynchronizationContext doesn't give any special timing guarantees
+		// about resuming after a Task.Delay completes.
 		Stopwatch sw = new();
 		sw.Start();
 		await Task.Delay(100, token);
